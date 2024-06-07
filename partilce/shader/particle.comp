@@ -1,0 +1,73 @@
+#version 450
+
+#define G (1 / pow(10, 11) * 6.6743)
+#define CURSOR_INTERACT_RADIUS 10.0
+
+layout (push_constant) uniform l0
+{
+        uint user_input;
+        vec2 cursor_position;
+        vec2 drag_direction;
+};
+
+struct Particle
+{
+        float mass;
+        vec2 position, velocity;
+};
+
+layout (binding = 0) buffer l1
+{
+        uint nparticles;
+        Particle particles[];
+};
+
+void user_update(uint id)
+{
+        Particle particle = particles[id];
+        float dist = length(cursor_position - particle.position);
+        particle.velocity += drag_direction * uint(dist < CURSOR_INTERACT_RADIUS);
+
+
+        /* 
+        if (dist < cursor_interact_radius)
+        {
+                particle.velocity += drag_direction;
+        }
+        */
+}
+
+void particle_update(uint id)
+{       
+        float total_force = 0.0;
+        Particle particle = particles[id];
+        for(uint i = 0; i < nparticles; i++)
+        {
+                Particle neighbor = particles[i];
+
+                float r = length(neighbor.position - particle.position);
+
+                float fg = (particle.mass * neighbor.mass) / (r * r) * G;
+
+                total_force += fg;
+        }
+
+        float a = particle.mass / total_force;
+}
+
+void main()
+{
+        uint particle_id = 0;
+
+        if (nparticles <= particle_id) 
+        {
+                return;
+        }
+
+        if (bool(user_input))
+        {       
+                user_update(particle_id);
+        }
+
+        particle_update(particle_id);
+}
